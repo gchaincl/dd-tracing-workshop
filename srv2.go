@@ -11,6 +11,7 @@ import (
 	dd "github.com/gchaincl/dd-go-opentracing"
 	"github.com/gorilla/mux"
 	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/log"
 )
 
@@ -20,8 +21,9 @@ func init() {
 }
 
 func db(ctx opentracing.SpanContext) {
-	defer opentracing.StartSpan("SELECT * FROM auth",
+	defer opentracing.StartSpan("DB Query",
 		opentracing.ChildOf(ctx),
+		opentracing.Tag{string(ext.Component), "SELECT * FROM auth"},
 	).Finish()
 
 	sleep := rand.Intn(1000)

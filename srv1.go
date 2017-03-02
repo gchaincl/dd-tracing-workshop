@@ -12,6 +12,7 @@ import (
 	dd "github.com/gchaincl/dd-go-opentracing"
 	"github.com/gorilla/mux"
 	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 )
 
 func init() {
@@ -21,6 +22,7 @@ func init() {
 
 func trace(op string, parent opentracing.Span, req *http.Request) opentracing.Span {
 	span := opentracing.StartSpan(op, opentracing.ChildOf(parent.Context()))
+	ext.Component.Set(span, "/auth/{id}")
 	err := span.Tracer().Inject(
 		span.Context(),
 		opentracing.HTTPHeaders,
@@ -35,7 +37,8 @@ func trace(op string, parent opentracing.Span, req *http.Request) opentracing.Sp
 }
 
 func PostUser(w http.ResponseWriter, req *http.Request) {
-	span := opentracing.StartSpan("POST /users/{id}")
+	span := opentracing.StartSpan("Handle POST")
+	ext.Component.Set(span, "/users/{id}")
 	defer span.Finish()
 
 	sleep := rand.Intn(1000)
@@ -43,7 +46,7 @@ func PostUser(w http.ResponseWriter, req *http.Request) {
 	time.Sleep(time.Duration(sleep) * time.Millisecond)
 
 	req, _ = http.NewRequest("POST", "http://localhost:8002/auth/"+mux.Vars(req)["id"], nil)
-	child := trace("POST /auth/{id}", span, req)
+	child := trace("Call POST", span, req)
 	http.DefaultClient.Do(req)
 	child.Finish()
 
