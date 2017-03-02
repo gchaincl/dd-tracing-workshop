@@ -24,6 +24,7 @@ func db(ctx opentracing.SpanContext) {
 	defer opentracing.StartSpan("DB Query",
 		opentracing.ChildOf(ctx),
 		opentracing.Tag{string(ext.Component), "SELECT * FROM auth"},
+		opentracing.Tag{string(ext.PeerService), "srv2"},
 	).Finish()
 
 	sleep := rand.Intn(1000)
@@ -34,6 +35,7 @@ func db(ctx opentracing.SpanContext) {
 func async(ctx opentracing.SpanContext) {
 	span := opentracing.StartSpan("ASYNC JOB",
 		opentracing.ChildOf(ctx),
+		opentracing.Tag{string(ext.PeerService), "srv2"},
 	)
 	defer span.Finish()
 
