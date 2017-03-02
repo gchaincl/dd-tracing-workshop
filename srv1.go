@@ -40,6 +40,7 @@ func PostUser(w http.ResponseWriter, req *http.Request) {
 	span := opentracing.StartSpan("Handle POST")
 	ext.Component.Set(span, "/users/{id}")
 	ext.PeerService.Set(span, "srv1")
+	dd.EnvTag.Set(span, "test")
 	defer span.Finish()
 
 	sleep := rand.Intn(1000)
