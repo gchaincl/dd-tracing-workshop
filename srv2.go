@@ -1,8 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	"log"
+	stdlog "log"
 	"math/rand"
 	"net/http"
 	"time"
@@ -10,6 +11,7 @@ import (
 	dd "github.com/gchaincl/dd-go-opentracing"
 	"github.com/gorilla/mux"
 	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/log"
 )
 
 func init() {
@@ -28,12 +30,15 @@ func db(ctx opentracing.SpanContext) {
 }
 
 func async(ctx opentracing.SpanContext) {
-	defer opentracing.StartSpan("ASYNC JOB",
+	span := opentracing.StartSpan("ASYNC JOB",
 		opentracing.ChildOf(ctx),
-	).Finish()
+	)
+	defer span.Finish()
+
 	sleep := rand.Intn(3000)
 	fmt.Printf("\n\tAsync job (%dms) ... ", sleep)
 	time.Sleep(time.Duration(sleep) * time.Millisecond)
+	span.LogFields(log.Error(errors.New("boom")))
 	fmt.Println("OK")
 }
 
@@ -43,7 +48,7 @@ func PostAuth(w http.ResponseWriter, req *http.Request) {
 		opentracing.HTTPHeadersCarrier(req.Header),
 	)
 	if err != nil {
-		log.Println(err)
+		stdlog.Println(err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
@@ -65,8 +70,8 @@ func main() {
 	m.HandleFunc("/auth/{id}", PostAuth).
 		Methods("POST")
 
-	log.Printf("bind = %+v\n", bind)
-	log.Fatalln(
+	stdlog.Printf("bind = %+v\n", bind)
+	stdlog.Fatalln(
 		http.ListenAndServe(bind, m),
 	)
 }
