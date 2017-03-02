@@ -17,6 +17,7 @@ import (
 
 func init() {
 	tracer := dd.NewTracer()
+	tracer.(*dd.Tracer).DebugLoggingEnabled = true
 	opentracing.SetGlobalTracer(tracer)
 }
 
