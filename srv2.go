@@ -36,6 +36,7 @@ func async(ctx opentracing.SpanContext) {
 	span := opentracing.StartSpan("ASYNC JOB",
 		opentracing.ChildOf(ctx),
 		opentracing.Tag{string(ext.PeerService), "srv2"},
+		opentracing.Tag{"queue", "queue-1"},
 	)
 	defer span.Finish()
 
