@@ -1,3 +1,5 @@
+//+build srv1
+
 package main
 
 import (
@@ -7,15 +9,43 @@ import (
 	"net/http"
 	"time"
 
+	dd "github.com/gchaincl/dd-go-opentracing"
 	"github.com/gorilla/mux"
+	opentracing "github.com/opentracing/opentracing-go"
 )
 
+func init() {
+	tracer := dd.NewTracer()
+	opentracing.SetGlobalTracer(tracer)
+}
+
+func trace(op string, parent opentracing.Span, req *http.Request) opentracing.Span {
+	span := opentracing.StartSpan(op, opentracing.ChildOf(parent.Context()))
+	err := span.Tracer().Inject(
+		span.Context(),
+		opentracing.HTTPHeaders,
+		opentracing.HTTPHeadersCarrier(req.Header),
+	)
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	return span
+}
+
 func PostUser(w http.ResponseWriter, req *http.Request) {
-	sleep := rand.Intn(1000) + 1000
+	span := opentracing.StartSpan("POST /users/{id}")
+	defer span.Finish()
+
+	sleep := rand.Intn(1000)
 	fmt.Printf("%s %s (%dms) ...", req.Method, req.URL, sleep)
 	time.Sleep(time.Duration(sleep) * time.Millisecond)
 
-	http.Post("http://localhost:8002/auth/"+mux.Vars(req)["id"], "", nil)
+	req, _ = http.NewRequest("POST", "http://localhost:8002/auth/"+mux.Vars(req)["id"], nil)
+	child := trace("POST /auth/{id}", span, req)
+	http.DefaultClient.Do(req)
+	child.Finish()
 
 	fmt.Println(" OK")
 }
