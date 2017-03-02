@@ -20,27 +20,20 @@ func init() {
 	opentracing.SetGlobalTracer(tracer)
 }
 
-func trace(op string, parent opentracing.Span, req *http.Request) opentracing.Span {
-	span := opentracing.StartSpan(op, opentracing.ChildOf(parent.Context()))
+func trace(op string, span opentracing.Span, req *http.Request) error {
 	ext.Component.Set(span, "/auth/{id}")
-	err := span.Tracer().Inject(
+	ext.PeerService.Set(span, "srv1")
+	dd.EnvTag.Set(span, "test")
+
+	return span.Tracer().Inject(
 		span.Context(),
 		opentracing.HTTPHeaders,
 		opentracing.HTTPHeadersCarrier(req.Header),
 	)
-
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	return span
 }
 
 func PostUser(w http.ResponseWriter, req *http.Request) {
-	span := opentracing.StartSpan("Handle POST")
-	ext.Component.Set(span, "/users/{id}")
-	ext.PeerService.Set(span, "srv1")
-	dd.EnvTag.Set(span, "test")
+	span := opentracing.StartSpan("POST")
 	defer span.Finish()
 
 	sleep := rand.Intn(1000)
@@ -48,9 +41,12 @@ func PostUser(w http.ResponseWriter, req *http.Request) {
 	time.Sleep(time.Duration(sleep) * time.Millisecond)
 
 	req, _ = http.NewRequest("POST", "http://localhost:8002/auth/"+mux.Vars(req)["id"], nil)
-	child := trace("Call POST", span, req)
+	if err := trace("POST", span, req); err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
 	http.DefaultClient.Do(req)
-	child.Finish()
 
 	fmt.Println(" OK")
 }
